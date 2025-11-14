@@ -280,7 +280,7 @@ public class createItem extends ItemStack{
         player.teleport(player.getWorld().getSpawnLocation());
         Sound sound= XSounds.BLOCK_NOTE_BLOCK_XYLOPHONE.parseSound();
         player.playSound(player.getLocation(), sound, 3.0f, 0.5f);
-        player.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+        player.removePotionEffect(PotionEffectType.RESISTANCE);
 	    player.removePotionEffect(PotionEffectType.SATURATION);
 	    BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
 	        scheduler.scheduleSyncDelayedTask(plugin, new Runnable() {

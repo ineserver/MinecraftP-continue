@@ -27,6 +27,7 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import io.papermc.paper.event.player.PlayerOpenSignEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -174,8 +175,8 @@ public class Eventlis implements Listener{
                  }
  				 plugin.getParkourConfig().set(uuid+".millis",System.currentTimeMillis());
  				 plugin.getParkourConfig().set(uuid+".Name",pN);
- 				 plugin.saveParkourConfig();
- 				 player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 2147000, 100));
+				 plugin.saveParkourConfig();
+				 player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 2147000, 100));
  				 player.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 2147000, 100));
     	    	return;}
     	    if(plugin.getParkourConfig().getStringList("goal").contains("("+X+")("+Y+")("+Z+")")){
@@ -207,7 +208,7 @@ public class Eventlis implements Listener{
                      	player.sendMessage(ChatColor.GRAY+"your best is: "+com.mi10n.utility.Time.format(plugin.getDatabase().getBest(player, name)));
                      }
                 }
-     	        player.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+    	        player.removePotionEffect(PotionEffectType.RESISTANCE);
      	        player.removePotionEffect(PotionEffectType.SATURATION);
     	    	BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
     	        scheduler.scheduleSyncDelayedTask(plugin, new Runnable() {
@@ -578,8 +579,8 @@ public class Eventlis implements Listener{
         }
         if (player.getVelocity().getY() > 0) {
             double jumpVelocity = (double) 0.42F;
-            if (player.hasPotionEffect(PotionEffectType.JUMP)) {
-                jumpVelocity += (double) ((float) (player.getPotionEffect(PotionEffectType.JUMP).getAmplifier() + 1) * 0.1F);
+            if (player.hasPotionEffect(PotionEffectType.JUMP_BOOST)) {
+                jumpVelocity += (double) ((float) (player.getPotionEffect(PotionEffectType.JUMP_BOOST).getAmplifier() + 1) * 0.1F);
             }
             if (e.getPlayer().getLocation().getBlock().getType() != Material.LADDER && prevPlayersOnGround.contains(player.getUniqueId())) {
                 if (!player.isOnGround() && Double.compare(player.getVelocity().getY(), jumpVelocity) == 0) {
@@ -644,6 +645,18 @@ public class Eventlis implements Listener{
     	 }else {}
     	}
     }
+	
+	@EventHandler
+	public void onSignOpen(PlayerOpenSignEvent e) {
+		// チェックポイント看板の編集を防止
+		Sign sign = e.getSign();
+		String firstLine = sign.line(0).toString();
+		// ChatColorのレガシーコードをチェック
+		if (firstLine.contains("CheckPoint")) {
+			e.setCancelled(true);
+		}
+	}
+	
 	@EventHandler
 	public void rightClick(PlayerInteractEvent e) {
 		Player player = e.getPlayer();
@@ -673,23 +686,27 @@ public class Eventlis implements Listener{
              .plugin(plugin)
              .text("Define Parkour Name")
              .title("Define Parkour Name")
-             .onComplete((editor,text)->{
+             .onClick((slot, stateSnapshot) -> {
+            	 if(slot != AnvilGUI.Slot.OUTPUT) {
+            		 return java.util.Collections.emptyList();
+            	 }
             	 ItemMeta meta = e.getItem().getItemMeta();
          	     meta.setDisplayName(ChatColor.GOLD+"Set start");
                  List<String> lorelist = new ArrayList<String>();
         			String lore0 = ChatColor.BLUE+"Right clicking, set start";
         			String lore1 = ChatColor.BLUE+"spot of parkours.";
         			lorelist.add(0,lore0); lorelist.add(1,lore1);
-        			if(text != null) {
+        			String text = stateSnapshot.getText();
+        			if(text != null && !text.isEmpty()) {
         				String lore2 = ChatColor.BLUE+"ParkourName: "+ChatColor.GREEN+text;
         				lorelist.add(2, lore2);
-        				}
+        			}
         			meta.setLore(lorelist);
         			e.getItem().setItemMeta(meta);
 
-            	 editor.sendMessage(ChatColor.GREEN+"The parkour name has been set to "+ChatColor.YELLOW+text+ChatColor.GREEN+".");
-            	 return AnvilGUI.Response.close();
-            			 })
+            	 stateSnapshot.getPlayer().sendMessage(ChatColor.GREEN+"The parkour name has been set to "+ChatColor.YELLOW+text+ChatColor.GREEN+".");
+            	 return java.util.Collections.singletonList(AnvilGUI.ResponseAction.close());
+             })
              .open(player);
              e.setCancelled(true);
 

@@ -14,8 +14,23 @@ import org.bukkit.inventory.meta.ItemMeta;
 import com.mi10n.main.MinecraftP;
 
 public class InventoryMethod {
-    static final String VERSION = Bukkit.getServer().getClass().getPackage().getName().substring(23);
+    static final String VERSION = getServerVersion();
 	static MinecraftP plugin;
+	
+	private static String getServerVersion() {
+		try {
+			String packageName = Bukkit.getServer().getClass().getPackage().getName();
+			// Paper 1.21+ では "org.bukkit.craftbukkit" のみ
+			// 古いバージョンでは "org.bukkit.craftbukkit.v1_xx_Rx"
+			if (packageName.equals("org.bukkit.craftbukkit")) {
+				return ""; // Paper 1.21+ では空文字列を返す
+			}
+			return packageName.substring(packageName.lastIndexOf('.') + 1);
+		} catch (Exception e) {
+			return "";
+		}
+	}
+	
 	public InventoryMethod(MinecraftP instance) {
         plugin = instance;
     }
@@ -53,19 +68,13 @@ public class InventoryMethod {
 	}
 
 	public static String getNameX(InventoryEvent InventoryE) {
-		String name = null;
-		if(XMaterial.isMoreThan1_14()) {
-				try {
-					InventoryView view = (InventoryView)InventoryEvent.class.getMethod("getView").invoke(InventoryE);
-					name = view.getTitle();
-				} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException
-						| NoSuchMethodException | SecurityException e) {
-					e.printStackTrace();
-				}
-				return name;
+		try {
+			InventoryView view = InventoryE.getView();
+			return view.getTitle();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "";
 		}
-			return InventoryE.getInventory().getName();
-
 	}
 	public static void SetStartItem(Player player) {
 		 player.getInventory().setItem(0,createItem.getTeleporter());
@@ -74,18 +83,37 @@ public class InventoryMethod {
          player.getInventory().setItem(8,createItem.getConfigItem());
          player.getInventory().setItem(6,createItem.getUp());
 	}
-   public static void   addOneItem(Player player ,ItemStack item, ItemMeta meta){
+   public static void addOneItem(Player player, ItemStack item, ItemMeta meta) {
        try {
-       Class<?> CraftInventory = Class.forName("org.bukkit.craftbukkit."+VERSION+".inventory.CraftInventory");
-       Method firstEmpty = CraftInventory.getMethod("firstEmpty");
-       int index = (int)firstEmpty.invoke(player.getInventory());
-       if(index == -1) {return;}
-       setItem(player,index,item,meta);
-       }catch(Exception e) {e.printStackTrace();}
-
+           // Paper 1.21+ では NMS を使わずに標準 API を使用
+           if (VERSION.isEmpty()) {
+               item.setItemMeta(meta);
+               player.getInventory().addItem(item);
+               return;
+           }
+           // 旧バージョン用の NMS コード
+           Class<?> CraftInventory = Class.forName("org.bukkit.craftbukkit." + VERSION + ".inventory.CraftInventory");
+           Method firstEmpty = CraftInventory.getMethod("firstEmpty");
+           int index = (int) firstEmpty.invoke(player.getInventory());
+           if (index == -1) {
+               return;
+           }
+           setItem(player, index, item, meta);
+       } catch (Exception e) {
+           // フォールバック: 標準 API を使用
+           item.setItemMeta(meta);
+           player.getInventory().addItem(item);
+       }
    }
    public static void setItem(Player player ,int index, ItemStack item,ItemMeta meta) {
 	   try {
+	       // Paper 1.21+ では NMS を使わずに標準 API を使用
+	       if (VERSION.isEmpty()) {
+	           item.setItemMeta(meta);
+	           player.getInventory().setItem(index, item);
+	           return;
+	       }
+	       // 旧バージョン用の NMS コード
 	   Class<?> CraftInventory = Class.forName("org.bukkit.craftbukkit."+VERSION+".inventory.CraftInventory");
        Method getIInventory=CraftInventory.getMethod("getInventory");
        Object IInventoryOBJ =getIInventory.invoke(player.getInventory());
@@ -95,9 +123,17 @@ public class InventoryMethod {
        setItem.setAccessible(true);
        Object stack= asNMScopy(item,meta);
        setItem.invoke(IInventoryOBJ, index,stack);
-	   }catch(Exception e) {e.printStackTrace();}
+	   }catch(Exception e) {
+	       // フォールバック: 標準 API を使用
+	       item.setItemMeta(meta);
+	       player.getInventory().setItem(index, item);
+	   }
    }
    public static Object asNMScopy(ItemStack stack ,ItemMeta itemmeta) {
+	   // Paper 1.21+ では NMS を使用しない
+	   if (VERSION.isEmpty()) {
+	       return null;
+	   }
 	   try {
 	   Class<?> CraftMagicNumbers = Class.forName("org.bukkit.craftbukkit."+VERSION+".util.CraftMagicNumbers");
 	   Object item;
@@ -116,7 +152,7 @@ public class InventoryMethod {
 		   nmsStack =NMSitemstack.getConstructor(IMaterial,int.class).newInstance(item,stack.getAmount());
 	   }
 	   Class<?> NBTTagCompound = Class.forName("net.minecraft.server."+VERSION+".NBTTagCompound");
-	   Object nbt =NBTTagCompound.newInstance();
+	   Object nbt =NBTTagCompound.getDeclaredConstructor().newInstance();
 	   Method setTag = NMSitemstack.getMethod("setTag", NBTTagCompound);
 	   setTag.invoke(nmsStack, nbt);
 	   Class<?> CraftMetaItem = Class.forName("org.bukkit.craftbukkit."+VERSION+".inventory.CraftMetaItem");
