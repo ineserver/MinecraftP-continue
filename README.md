@@ -1,4 +1,4 @@
-This is an unofficial updated version of the original project by 1necat.
+これは非公式の更新版です
 
 # MinecraftP
 A parkour plug-in that can be handled intuitively.
