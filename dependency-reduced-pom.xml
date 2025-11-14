@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.mi10n</groupId>
   <artifactId>MinecraftP</artifactId>
-  <version>0.38</version>
+  <version>0.38.1</version>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <testSourceDirectory>/src/test/java</testSourceDirectory>
