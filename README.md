@@ -1,4 +1,4 @@
-This is an unofficial updated version of the original project by Mi10tsuhashi.
+This is an unofficial updated version of the original project by 1necat.
 
 # MinecraftP
 A parkour plug-in that can be handled intuitively.
